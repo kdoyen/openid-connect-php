@@ -1,5 +1,4 @@
 <?php
-declare(strict_types = 1);
 
 namespace OpenIdConnectClient;
 
@@ -8,9 +7,10 @@ use phpseclib\Crypt\RSA;
 /**
  * Copyright MITRE 2016
  *
- * OpenIDConnectClient for PHP7
+ * OpenIDConnectClient for PHP5.4+
  * Original author: Michael Jett <mjett@mitre.org>
  * Work appended by: Otto Rask <ojrask@gmail.com>
+ * Work appended by: Kristopher Doyen <kristopher.doyen@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may
  * not use this file except in compliance with the License. You may obtain
@@ -29,7 +29,9 @@ use phpseclib\Crypt\RSA;
  * Class OpenIDConnectClient
  *
  * Please note this class stores nonces by default in $_SESSION['openid_connect_nonce']
+ * AND state in $_SESSION['openid_connect_state']
  *
+ * @TODO Replace $_SESSION usage with a more portable/flexible solution.
  * @package OpenIdConnectClient
  */
 class OpenIdConnectClient
@@ -217,7 +219,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setProviderUrl(string $provider_url)
+    public function setProviderUrl($provider_url)
     {
         $this->providerConfig['issuer'] = $provider_url;
     }
@@ -227,7 +229,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getProviderHost() : string
+    public function getProviderHost()
     {
         $url = $this->getProviderUrl();
 
@@ -251,7 +253,7 @@ class OpenIdConnectClient
      *
      * @return array
      */
-    public function getResponseTypes() : array
+    public function getResponseTypes()
     {
         return $this->responseTypes;
     }
@@ -360,7 +362,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function signOut(string $accessToken, string $redirect = '')
+    public function signOut($accessToken, $redirect = '')
     {
         $redirect = $redirect === '' ? null : $redirect;
 
@@ -394,7 +396,7 @@ class OpenIdConnectClient
      *
      * @return array
      */
-    public function getScopes() : array
+    public function getScopes()
     {
         return $this->scopes;
     }
@@ -416,7 +418,7 @@ class OpenIdConnectClient
      *
      * @return array
      */
-    public function getAuthParams() : array
+    public function getAuthParams()
     {
         return $this->authParams;
     }
@@ -434,7 +436,7 @@ class OpenIdConnectClient
      *
      * @return mixed
      */
-    protected function getProviderConfigValue(string $param, $default = null)
+    protected function getProviderConfigValue($param, $default = null)
     {
         if (isset($this->providerConfig[$param])) {
             return $this->providerConfig[$param];
@@ -481,7 +483,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setRedirectUrl(string $url)
+    public function setRedirectUrl($url)
     {
         if (filter_var($url, FILTER_VALIDATE_URL) !== false) {
             $this->redirectUrl = $url;
@@ -494,7 +496,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getRedirectUrl() : string
+    public function getRedirectUrl()
     {
         // If the redirect URL has been set then return it.
         if (!empty($this->redirectUrl)) {
@@ -538,7 +540,7 @@ class OpenIdConnectClient
      * @access protected
      * @return string
      */
-    protected function generateRandString() : string
+    protected function generateRandString()
     {
         $rand = (string) rand();
 
@@ -628,7 +630,7 @@ class OpenIdConnectClient
      *
      * @return mixed
      */
-    protected function requestTokens(string $code)
+    protected function requestTokens($code)
     {
         $token_endpoint = $this->getProviderConfigValue('token_endpoint');
         $token_endpoint_auth_methods_supported = $this->getProviderConfigValue('token_endpoint_auth_methods_supported', ['client_secret_basic']);
@@ -722,7 +724,7 @@ class OpenIdConnectClient
      *
      * @return bool
      */
-    protected function keyMatchesHeader(\stdClass $key, \stdClass $header) : bool
+    protected function keyMatchesHeader(\stdClass $key, \stdClass $header)
     {
         // TODO messy, try to streamline this stuff
         $header_kid_available = isset($header->kid);
@@ -754,11 +756,11 @@ class OpenIdConnectClient
      * @return bool
      */
     protected function verifyRsaJwtSignature(
-        string $hashtype,
+       $hashtype,
         \stdClass $key,
-        string $payload,
-        string $signature
-    ) : bool
+       $payload,
+       $signature
+    )
     {
         if (!class_exists(RSA::class)) {
             throw new OpenIdConnectException('Crypt_RSA support unavailable.');
@@ -795,11 +797,11 @@ class OpenIdConnectClient
      *
      * @return bool
      */
-    protected function verifyJwtSignature(string $jwt) : bool
+    protected function verifyJwtSignature($jwt)
     {
         $parts = explode('.', $jwt);
-        $signature = base64url_decode(array_pop($parts));
-        $header = json_decode(base64url_decode($parts[0]));
+        $signature = Utils::base64url_decode(array_pop($parts));
+        $header = json_decode(Utils::base64url_decode($parts[0]));
         $payload = implode('.', $parts);
 
         $jwks_uri = $this->getProviderConfigValue('jwks_uri');
@@ -834,7 +836,7 @@ class OpenIdConnectClient
      *
      * @return bool
      */
-    protected function verifyJwtClaims(\stdClass $claims, $accessToken = null) : bool
+    protected function verifyJwtClaims(\stdClass $claims, $accessToken = null)
     {
         $expected_at_hash = isset($claims->at_hash) && isset($accessToken)
             ? $this->getJwtClaimsAtHashForAccessToken($accessToken)
@@ -860,7 +862,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function getJwtClaimsAtHashForAccessToken(string $accessToken) : string
+    protected function getJwtClaimsAtHashForAccessToken($accessToken)
     {
         $access_token_header = $this->getAccessTokenHeader();
         $access_token_header_alg = isset($access_token_header->alg)
@@ -889,7 +891,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function base64EncodeUrl(string $str) : string
+    protected function base64EncodeUrl($str)
     {
         $enc = base64_encode($str);
         $enc = rtrim($enc, '=');
@@ -908,11 +910,11 @@ class OpenIdConnectClient
      *
      * @return \stdClass
      */
-    protected function decodeJwt(string $jwt, int $section = 0) : \stdClass
+    protected function decodeJwt($jwt, $section = 0)
     {
         $parts = explode('.', $jwt);
 
-        return json_decode(base64url_decode($parts[$section]));
+        return json_decode(Utils::base64url_decode($parts[$section]));
     }
 
     /**
@@ -975,7 +977,7 @@ class OpenIdConnectClient
      *
      * @return mixed
      */
-    public function requestUserInfo(string $attribute = '')
+    public function requestUserInfo($attribute = '')
     {
         $attribute = $attribute === '' ? null : $attribute;
 
@@ -1015,7 +1017,7 @@ class OpenIdConnectClient
      *
      * @return mixed
      */
-    protected function fetchUrl(string $url, string $post_body = '', array $headers = [])
+    protected function fetchUrl($url, $post_body = '', array $headers = [])
     {
         return $this->urlRequester->fetch($url, $post_body, $headers);
     }
@@ -1026,7 +1028,7 @@ class OpenIdConnectClient
      * @throws OpenIdConnectException
      * @return string
      */
-    public function getProviderUrl() : string
+    public function getProviderUrl()
     {
         if (!isset($this->providerConfig['issuer'])) {
             throw new OpenIdConnectException('The provider URL has not been set');
@@ -1044,7 +1046,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    protected function redirect(string $url)
+    protected function redirect($url)
     {
         header('Location: ' . $url);
         exit;
@@ -1057,7 +1059,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setHttpProxy(string $httpProxy)
+    public function setHttpProxy($httpProxy)
     {
         $this->httpProxy = $httpProxy;
         $this->urlRequester->httpProxy = $this->httpProxy;
@@ -1070,7 +1072,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setCertPath(string $certPath)
+    public function setCertPath($certPath)
     {
         $this->certPath = $certPath;
         $this->urlRequester->certPath = $this->certPath;
@@ -1095,7 +1097,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setClientSecret(string $clientSecret)
+    public function setClientSecret($clientSecret)
     {
         $this->clientSecret = $clientSecret;
     }
@@ -1107,7 +1109,7 @@ class OpenIdConnectClient
      *
      * @return void
      */
-    public function setClientId(string $clientId)
+    public function setClientId($clientId)
     {
         $this->clientId = $clientId;
     }
@@ -1156,7 +1158,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getClientName() : string
+    public function getClientName()
     {
         return $this->clientName;
     }
@@ -1178,7 +1180,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getClientId() : string
+    public function getClientId()
     {
         return $this->clientId;
     }
@@ -1188,7 +1190,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getClientSecret() : string
+    public function getClientSecret()
     {
         return $this->clientSecret;
     }
@@ -1198,7 +1200,7 @@ class OpenIdConnectClient
      *
      * @return bool
      */
-    public function canVerifySignatures() : bool
+    public function canVerifySignatures()
     {
         return class_exists(RSA::class);
     }
@@ -1218,7 +1220,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getRefreshToken() : string
+    public function getRefreshToken()
     {
         return $this->refreshToken;
     }
@@ -1238,7 +1240,7 @@ class OpenIdConnectClient
      *
      * @return object
      */
-    public function getAccessTokenHeader() : object
+    public function getAccessTokenHeader()
     {
         return $this->decodeJwt($this->accessToken, 0);
     }
@@ -1248,7 +1250,7 @@ class OpenIdConnectClient
      *
      * @return object
      */
-    public function getAccessTokenPayload() : object
+    public function getAccessTokenPayload()
     {
         return $this->decodeJwt($this->accessToken, 1);
     }
@@ -1258,7 +1260,7 @@ class OpenIdConnectClient
      *
      * @return object
      */
-    public function getIdTokenHeader() : object
+    public function getIdTokenHeader()
     {
         return $this->decodeJwt($this->idToken, 0);
     }
@@ -1268,7 +1270,7 @@ class OpenIdConnectClient
      *
      * @return object
      */
-    public function getIdTokenPayload() : object
+    public function getIdTokenPayload()
     {
         return $this->decodeJwt($this->idToken, 1);
     }
@@ -1278,7 +1280,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    public function getTokenResponse() : string
+    public function getTokenResponse()
     {
         return $this->tokenResponse;
     }
@@ -1290,7 +1292,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function setNonce(string $nonce) : string
+    protected function setNonce($nonce)
     {
         $_SESSION['openid_connect_nonce'] = $nonce;
 
@@ -1302,7 +1304,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function getNonce() : string
+    protected function getNonce()
     {
         return isset($_SESSION['openid_connect_nonce'])
             ? $_SESSION['openid_connect_nonce']
@@ -1326,7 +1328,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function setState(string $state) : string
+    protected function setState($state)
     {
         $_SESSION['openid_connect_state'] = $state;
 
@@ -1338,7 +1340,7 @@ class OpenIdConnectClient
      *
      * @return string
      */
-    protected function getState() : string
+    protected function getState()
     {
         return isset($_SESSION['openid_connect_state'])
             ? $_SESSION['openid_connect_state']
@@ -1353,5 +1355,66 @@ class OpenIdConnectClient
     protected function unsetState()
     {
         unset($_SESSION['openid_connect_state']);
+    }
+
+    /**
+     * Perform a token introspection on provided token with the OIDC provider.
+     *
+     * OIDC introspection response has the following attributes as defined in
+     * RFC7662.
+     *
+     *  Attribute        Type        Description
+     *  active           boolean     REQUIRED.  Boolean indicator of whether or
+     *                               not the presented token is currently active.
+     *  scope            string      OPTIONAL.  A JSON string containing a
+     *                               space-separated list of scopes associated
+     *                               with this token.
+     *  client_id        string      OPTIONAL. Client identifier for the client that
+     *                               requested this token.
+     *  username         string      OPTIONAL.  Human-readable identifier for the
+     *                               resource owner who authorized this token.
+     *  token_type       string      OPTIONAL.  Type of the token.
+     *  exp              int         OPTIONAL.  Integer timestamp, measured in
+     *                               the number of seconds since January 1 1970
+     *                               UTC, indicating when this token will expire.
+     *  iat              int         OPTIONAL.  Integer timestamp, measured in
+     *                               the number of seconds since January 1 1970
+     *                               UTC, indicating when this token was
+     *                               originally issued.
+     *  nbf              int         OPTIONAL.  Integer timestamp, measured in
+     *                               the number of seconds since January 1 1970
+     *                               UTC, indicating when this token is not to
+     *                               be used before.
+     *  sub              string      OPTIONAL.  Subject of the token.
+     *  aud              string      OPTIONAL.  Service-specific string
+     *                               identifier or list of string identifiers
+     *                               representing the intended audience for this
+     *                               token.
+     *  iss              string      OPTIONAL.  String representing the issuer
+     *                               of this token.
+     *  jti              string      OPTIONAL.  String identifier for the token.
+     *
+     *
+     * @param  string $token           Access token or refresh token to perform introspection on.
+     * @param  string $token_type_hint Token type hint to provide to server defaulting to access_token.
+     * @return IntrospectionResponse   Returns object for handling response.
+     */
+    public function introspectToken($token, $token_type_hint = 'access_token')
+    {
+      $introspection_endpoint = $this->getProviderConfigValue('introspection_endpoint');
+
+      $token_params = [
+        'token' => $token,
+        'token_type_hint' => $token_type_hint
+      ];
+
+      // Consider Basic authentication if provider config is set this way
+      $basic_auth_header_value = base64_encode($this->clientId . ':' . $this->clientSecret);
+      $headers = ['Authorization: Basic ' . $basic_auth_header_value];
+
+      // Convert token params to string format
+      $token_params = http_build_query($token_params);
+
+      return new IntrospectionResponse($this->fetchUrl($introspection_endpoint, $token_params, $headers));
     }
 }

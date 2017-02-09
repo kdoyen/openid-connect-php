@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 namespace OpenIdConnectClient;
 
@@ -30,7 +29,7 @@ class UrlRequest
      *
      * @return mixed
      */
-    public function fetch(string $url, string $post_body = '', array $headers = [])
+    public function fetch($url, $post_body = '', array $headers = [])
     {
         if ($post_body === '') {
             return $this->get($url, $headers);
@@ -49,7 +48,7 @@ class UrlRequest
      *
      * @return mixed
      */
-    public function get(string $url, array $headers = [])
+    public function get($url, array $headers = [])
     {
         $headers = $this->parseHeaders($headers);
 
@@ -81,7 +80,7 @@ class UrlRequest
      *
      * @return mixed
      */
-    public function post(string $url, string $post_body, array $headers = [])
+    public function post($url, $post_body, array $headers = [])
     {
         $headers = $this->parseHeaders($headers);
 
@@ -133,7 +132,7 @@ class UrlRequest
      *
      * @return bool
      */
-    protected function headerExists(string $name, array $headers = []) : bool
+    protected function headerExists($name, array $headers = [])
     {
         if (empty($headers)) {
             return false;
@@ -161,7 +160,7 @@ class UrlRequest
      *
      * @return array
      */
-    protected function parseHeaders(array $headers) : array
+    protected function parseHeaders(array $headers)
     {
         if (empty($headers)) {
             return $headers;
@@ -190,7 +189,7 @@ class UrlRequest
      *
      * @return bool|\resource
      */
-    protected function getCurlHandle(string $url)
+    protected function getCurlHandle($url)
     {
         // OK cool - then let's create a new cURL resource handle
         $ch = curl_init();
@@ -214,14 +213,19 @@ class UrlRequest
             curl_setopt($ch, CURLOPT_PROXY, $this->httpProxy);
         }
 
-        // Set cert, otherwise ignore SSL peer verification
-        // FIXME force peer verification?
+        /**
+         * Set cert path if certPath has been provided
+         *
+         * Removed setting CURLOPT_SSL_VERIFYPEER to false if certPath is empty
+         * to force Curl to fall back to the default of true.
+         *
+         * This default value can be changed by setting libcurl environment
+         * variables on broken implementations.
+         */
         if (!empty($this->certPath)) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             curl_setopt($ch, CURLOPT_CAINFO, $this->certPath);
-        } else {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         }
 
         if (curl_errno($ch)) {

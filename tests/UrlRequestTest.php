@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 namespace OpenIdConnectClient\Tests;
 
@@ -30,7 +29,17 @@ class UrlRequestTest extends \PHPUnit_Framework_TestCase
         $req = new UrlRequest();
 
         $result = $req->get('http://example.com');
+        $this->assertRegExp('%Example Domain%', $result);
+    }
 
+    /**
+     *
+     */
+    public function test_it_makes_https_get_requests()
+    {
+        $req = new UrlRequest();
+
+        $result = $req->get('https://example.com');
         $this->assertRegExp('%Example Domain%', $result);
     }
 
