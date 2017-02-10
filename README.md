@@ -21,17 +21,6 @@ This package was originally created by [Michael Jett][2] and extensively modifie
 
 ## Install
 
-Add the package repository to your composer.json repositories
-
-```json
-"repositories": [
-    {
-        "type": "vcs",
-        "url": "https://github.com/kdoyen/openid-connect-php.git"
-    }
-]
-```
-
 Install library using composer
 
 ```sh
