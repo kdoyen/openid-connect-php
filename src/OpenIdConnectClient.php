@@ -316,14 +316,16 @@ class OpenIdConnectClient
 
         $claims = $this->decodeJwt($token_json->id_token, 1);
 
-        // Verify the signature
-        if ($this->canVerifySignatures() && !$this->verifyJwtSignature($token_json->id_token)) {
-            throw new OpenIdConnectException('Unable to verify signature');
-        } elseif (!$this->canVerifySignatures() && !$this->verifyJwtSignature($token_json->id_token)) {
-            user_error('Warning: JWT signature verification unavailable.');
+        if (!$this->canVerifySignatures()) {
+            throw new OpenIdConnectException('JWT signature verification unavailable');
         }
 
-        // If this is an invalid claim
+        // Attempt JWT signature verification
+        if (!$this->verifyJwtSignature($token_json->id_token)) {
+            throw new OpenIdConnectException('Unable to verify signature');
+        }
+
+        // Attempt JWT claims verifications
         if (!$this->verifyJwtClaims($claims, $token_json->access_token)) {
             throw new OpenIdConnectException('Unable to verify JWT claims');
         }
@@ -572,8 +574,7 @@ class OpenIdConnectClient
             'redirect_uri' => $this->getRedirectUrl(),
             'client_id' => $this->clientId,
             'nonce' => $nonce,
-            'state' => $state,
-            'scope' => 'openid'
+            'state' => $state
         ]);
 
         // If the client has been registered with additional scopes
