@@ -118,7 +118,7 @@ class IntrospectionResponse
   public function isActive()
   {
       if ($response = $this->getResponse()) {
-          if ($response->active === true && $this->isValid()) {
+          if (!empty($response->active) && $response->active === true && $this->isValid()) {
               return true;
           }
       }

@@ -168,4 +168,16 @@ class IntrospectionResponseTest extends \PHPUnit_Framework_TestCase
       $object = new IntrospectionResponse(json_encode($data));
       $this->assertJsonStringEqualsJsonString(json_encode($data), (string) $object);
     }
+
+    /**
+     *
+     */
+    public function test_missing_active_in_response()
+    {
+        $data = (object) [
+        ];
+
+        $object = new IntrospectionResponse(json_encode($data));
+        $this->assertFalse($object->isActive());
+    }
 }
