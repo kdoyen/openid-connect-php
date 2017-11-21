@@ -651,6 +651,7 @@ class OpenIdConnectClient
             $basic_auth_header_value = base64_encode($this->clientId . ':' . $this->clientSecret);
             $headers = ['Authorization: Basic ' . $basic_auth_header_value];
             unset($token_params['client_secret']);
+            unset($token_params['client_id']);
         }
 
         // Convert token params to string format
@@ -847,7 +848,7 @@ class OpenIdConnectClient
         $client_id_match = ($claims->aud === $this->clientId) || (in_array($this->clientId, $claims->aud));
         $nonce_match = $claims->nonce === $this->getNonce();
         $claims_not_expired = !isset($claims->exp) || $claims->exp > time();
-        $claims_nbf_okay = !isset($claims->nbf) || $claims->nbf < time();
+        $claims_nbf_okay = !isset($claims->nbf) || $claims->nbf <= time();
         $claims_hash_match = !isset($claims->at_hash) || $claims->at_hash === $expected_at_hash;
 
         return ($provider_match && $client_id_match && $nonce_match && $claims_not_expired && $claims_nbf_okay && $claims_hash_match);
